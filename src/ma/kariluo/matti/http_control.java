@@ -15,8 +15,9 @@ import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
+import javax.jmdns.ServiceTypeListener;
 
-public class http_control extends Activity implements ServiceListener
+public class http_control extends Activity implements ServiceListener, ServiceTypeListener
 {
 	private static final String TAG = "http_control";
 	private static final String DISCOVER_SERVICE_TYPE = "_http._tcp.local.";
@@ -30,8 +31,60 @@ public class http_control extends Activity implements ServiceListener
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+	}
+	@Override 
+	public void onStart()
+	{
+		Log.i(TAG, "Starting activity...");
+		super.onStart();
 		setContentView(R.layout.main);
 		setupZeroconf();
+	}
+	@Override
+	protected void onResume() 
+	{
+		super.onResume();
+	}
+	@Override
+	protected void onStop() 
+	{
+		super.onStop();
+		stopScan();
+	}
+	@Override
+	protected void onDestroy() 
+	{
+		super.onDestroy();
+	}
+	@Override
+	public void serviceResolved(ServiceEvent event) 
+	{
+		Log.d(TAG, "Service resolved: " + event.getInfo().getQualifiedName() 
+				+ " port:" + event.getInfo().getPort()
+				+ " domain:" + event.getInfo().getDomain()
+			);
+	}
+	@Override
+	public void serviceRemoved(ServiceEvent event)
+	{
+		Log.d(TAG, "Service removed: " + event.getName());
+	}
+	@Override
+	public void serviceAdded(ServiceEvent event) 
+	{
+		Log.d(TAG, "Service added: " + event.getName());
+		jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+	}
+	@Override
+	public void serviceTypeAdded(final ServiceEvent event)
+	{
+		Log.d(TAG, "Service type added " + event.toString());
+		jmdns.addServiceListener(event.getType(), this);
+	}
+	@Override
+	public void subTypeForServiceTypeAdded(ServiceEvent event) 
+	{
+		Log.d(TAG, "Service subtype added " + event.toString());
 	}
 	
 	private void setupZeroconf() 
@@ -76,46 +129,22 @@ public class http_control extends Activity implements ServiceListener
 			jmdns = JmDNS.create(addr, TAG);
 			Log.d(TAG, "jmdns created!");
 			Log.d(TAG, "Add listener...");
-			jmdns.addServiceListener(DISCOVER_SERVICE_TYPE, http_control.this);
+			// thanks http://stackoverflow.com/a/18288491
+			jmdns.addServiceTypeListener(http_control.this);
 		} 
 		catch (IOException e) 
 		{
-			e.printStackTrace();
+			Log.e(TAG, e.getMessage(), e);
 			jmdns = null;
 		}
 		Log.d(TAG, "Zeroconf started!");
 	}
 	
-	@Override
-	public void serviceResolved(ServiceEvent event) 
+	private void stopScan()
 	{
-		Log.d(TAG, "Service resolved: " + event.getInfo().getQualifiedName() 
-				+ " port:" + event.getInfo().getPort()
-				+ " domain:" + event.getInfo().getDomain()
-			);
-	}
-	@Override
-	public void serviceRemoved(ServiceEvent event)
-	{
-		Log.d(TAG, "Service removed: " + event.getName());
-	}
-	@Override
-	public void serviceAdded(ServiceEvent event) 
-	{
-		Log.d(TAG, "Service added: " + event.getName());
-		jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
-	}
-	
-	protected void onResume() 
-	{
-		super.onResume();
-	}
-		 
-	protected void onStop() 
-	{
-		super.onStop();
 		if (jmdns != null)
 		{
+			Log.i(TAG, "Stopping Zeroconf...");
 			jmdns.removeServiceListener(DISCOVER_SERVICE_TYPE, http_control.this);
 			try
 			{
@@ -133,11 +162,6 @@ public class http_control extends Activity implements ServiceListener
 			lock.release();
 			lock = null;
 		}
-	}
-	
-	protected void onDestroy() 
-	{
-		super.onDestroy();
 	}
 	
 }
