@@ -2,6 +2,7 @@ package ma.kariluo.matti;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
@@ -17,7 +18,9 @@ import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 import javax.jmdns.ServiceTypeListener;
 
-public class http_control extends Activity implements ServiceListener, ServiceTypeListener
+import ma.kariluo.matti.zeroconf_service;
+
+public class http_control extends Activity
 {
 	private static final String TAG = "http_control";
 	private static final String HTTP_SERVICE_TYPE = "_http._tcp.local.";
@@ -38,7 +41,9 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 		Log.i(TAG, "Starting http_control...");
 		super.onStart();
 		setContentView(R.layout.main);
-		setupZeroconf();
+		Intent mIntent = new Intent(this, zeroconf_service.class);
+		//mIntent.setData(Uri);
+		this.startService(mIntent);
 	}
 	@Override
 	protected void onResume() 
@@ -49,133 +54,10 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 	protected void onStop() 
 	{
 		super.onStop();
-		stopScan();
 	}
 	@Override
 	protected void onDestroy() 
 	{
 		super.onDestroy();
 	}
-	@Override
-	public void serviceResolved(ServiceEvent event) 
-	{
-		Log.d(TAG, String.format("Service resolved: %s %s %s:%s",
-				event.getType(),
-				event.getName(),
-				event.getInfo().getInetAddresses()[0],
-				event.getInfo().getPort()
-			));
-		if (HTTP_SERVICE_TYPE.equals(event.getType()))
-		{
-			Log.i(TAG, String.format("Http Service resolved: %s:%s",
-					event.getInfo().getInetAddresses()[0], 
-					event.getInfo().getPort()
-				));
-		}
-	}
-	@Override
-	public void serviceRemoved(ServiceEvent event)
-	{
-		Log.d(TAG, String.format("Service removed: %s", event.getName()));
-	}
-	@Override
-	public void serviceAdded(ServiceEvent event) 
-	{
-		Log.d(TAG, String.format("Service added: %s %s", event.getType(), event.getName()));
-		if (HTTP_SERVICE_TYPE.equals(event.getType()))
-		{
-			Log.i(TAG, String.format("Http Service found: %s", event.getName()));
-			jmdns.requestServiceInfo(event.getType(), event.getName());
-		}
-	}
-	@Override
-	public void serviceTypeAdded(final ServiceEvent event)
-	{
-		Log.d(TAG, String.format("Service type added %s", event.getType()));
-		jmdns.addServiceListener(event.getType(), this);
-	}
-	@Override
-	public void subTypeForServiceTypeAdded(ServiceEvent event) 
-	{
-		Log.d(TAG, String.format("Service subtype added %s", event.getType()));
-	}
-	
-	private void setupZeroconf() 
-	{
-		Log.d(TAG, "Setting up Zeroconf...");
-		Log.d(TAG, "Get WifiManager...");
-		WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-		Log.d(TAG, "Create lock...");
-		lock = wifi.createMulticastLock(TAG);
-		lock.setReferenceCounted(true);
-		Log.i(TAG, "Acquiring Multicast lock...");
-		lock.acquire();
-		if (lock.isHeld())
-		{
-			Log.d(TAG, "Lock acquired!");
-		}
-		else
-		{
-			Log.e(TAG, "Couldn't acquire lock!");
-			return;
-		}
-		
-		Log.d(TAG, "Create jmdns...");
-		try 
-		{
-			// Bug http://stackoverflow.com/a/13677686/1143172
-			int intaddr = wifi.getConnectionInfo().getIpAddress();			 
-			byte[] byteaddr = new byte[] { 
-					(byte) (intaddr & 0xff), 
-					(byte) (intaddr >> 8 & 0xff),
-					(byte) (intaddr >> 16 & 0xff), 
-					(byte) (intaddr >> 24 & 0xff) 
-				};
-			// Need to process UnknownHostException
-			InetAddress addr = InetAddress.getByAddress(byteaddr);
-			/*
-			String ip = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
-			ip = "0.0.0.0";
-			InetAddress addr = InetAddress.getByName(ip);
-			*/
-			Log.d(TAG, String.format("jmdns binding to %s", addr));
-			jmdns = JmDNS.create(addr, TAG);
-			Log.d(TAG, "jmdns created!");
-			Log.d(TAG, "Add listener...");
-			// thanks http://stackoverflow.com/a/18288491
-			jmdns.addServiceTypeListener(http_control.this);
-		} 
-		catch (IOException e) 
-		{
-			Log.e(TAG, e.getMessage(), e);
-			jmdns = null;
-		}
-		Log.d(TAG, "Zeroconf started!");
-	}
-	
-	private void stopScan()
-	{
-		if (jmdns != null)
-		{
-			Log.d(TAG, "Stopping Zeroconf...");
-			jmdns.unregisterAllServices();
-			try
-			{
-				jmdns.close();
-			} 
-			catch (IOException e) 
-			{
-				Log.e(TAG, e.getMessage(), e);
-			}
-			jmdns = null;
-		}
-		if (lock != null && lock.isHeld())
-		{
-			Log.i(TAG, "Releasing Multicast lock...");
-			lock.release();
-			lock = null;
-		}
-		Log.d(TAG, "Zeroconf stopped.");
-	}
-	
 }
