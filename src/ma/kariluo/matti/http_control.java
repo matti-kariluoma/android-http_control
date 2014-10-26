@@ -20,7 +20,7 @@ import javax.jmdns.ServiceTypeListener;
 public class http_control extends Activity implements ServiceListener, ServiceTypeListener
 {
 	private static final String TAG = "http_control";
-	private static final String DISCOVER_SERVICE_TYPE = "_http._tcp.local.";
+	private static final String HTTP_SERVICE_TYPE = "_http._tcp.local.";
 	// bugs ahoy https://code.google.com/p/android/issues/detail?id=35585
 	// thanks https://gist.github.com/icastell/5704165
 	// thanks http://stackoverflow.com/a/23854825
@@ -72,13 +72,22 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 	@Override
 	public void serviceAdded(ServiceEvent event) 
 	{
-		Log.d(TAG, "Service added: " + event.getName());
-		jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+		//Log.d(TAG, "Service added: " + event.toString());
+		Log.d(TAG, "Service added: " + event.getType() + " " + event.getName());
+		if (HTTP_SERVICE_TYPE.equals(event.getType()))
+		{
+			Log.i(TAG, "HTTP Server found: " + event.getInfo());
+		}
+		//jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
+		//
+		//ServiceInfo resolvedService = jmdns.getServiceInfo(event.getType(), event.getName());
+		//Log.d(TAG, "Service resolved returned: " + resolvedService.toString());
 	}
 	@Override
 	public void serviceTypeAdded(final ServiceEvent event)
 	{
-		Log.d(TAG, "Service type added " + event.toString());
+		//Log.d(TAG, "Service type added " + event.toString());
+		Log.d(TAG, "Service type added " + event.getType());
 		jmdns.addServiceListener(event.getType(), this);
 	}
 	@Override
@@ -145,7 +154,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 		if (jmdns != null)
 		{
 			Log.i(TAG, "Stopping Zeroconf...");
-			jmdns.removeServiceListener(DISCOVER_SERVICE_TYPE, http_control.this);
+			jmdns.unregisterAllServices();
 			try
 			{
 				jmdns.close();
@@ -162,6 +171,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 			lock.release();
 			lock = null;
 		}
+		Log.i(TAG, "Zeroconf stopped.");
 	}
 	
 }
