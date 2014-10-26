@@ -35,7 +35,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 	@Override 
 	public void onStart()
 	{
-		Log.i(TAG, "Starting activity...");
+		Log.i(TAG, "Starting http_control...");
 		super.onStart();
 		setContentView(R.layout.main);
 		setupZeroconf();
@@ -59,41 +59,45 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 	@Override
 	public void serviceResolved(ServiceEvent event) 
 	{
-		Log.d(TAG, "Service resolved: " + event.getInfo().getQualifiedName() 
-				+ " port:" + event.getInfo().getPort()
-				+ " domain:" + event.getInfo().getDomain()
-			);
+		Log.d(TAG, String.format("Service resolved: %s %s %s:%s",
+				event.getType(),
+				event.getName(),
+				event.getInfo().getInetAddresses()[0],
+				event.getInfo().getPort()
+			));
+		if (HTTP_SERVICE_TYPE.equals(event.getType()))
+		{
+			Log.i(TAG, String.format("Http Service resolved: %s:%s",
+					event.getInfo().getInetAddresses()[0], 
+					event.getInfo().getPort()
+				));
+		}
 	}
 	@Override
 	public void serviceRemoved(ServiceEvent event)
 	{
-		Log.d(TAG, "Service removed: " + event.getName());
+		Log.d(TAG, String.format("Service removed: %s", event.getName()));
 	}
 	@Override
 	public void serviceAdded(ServiceEvent event) 
 	{
-		//Log.d(TAG, "Service added: " + event.toString());
-		Log.d(TAG, "Service added: " + event.getType() + " " + event.getName());
+		Log.d(TAG, String.format("Service added: %s %s", event.getType(), event.getName()));
 		if (HTTP_SERVICE_TYPE.equals(event.getType()))
 		{
-			Log.i(TAG, "HTTP Server found: " + event.getInfo());
+			Log.i(TAG, String.format("Http Service found: %s", event.getName()));
+			jmdns.requestServiceInfo(event.getType(), event.getName());
 		}
-		//jmdns.requestServiceInfo(event.getType(), event.getName(), 1);
-		//
-		//ServiceInfo resolvedService = jmdns.getServiceInfo(event.getType(), event.getName());
-		//Log.d(TAG, "Service resolved returned: " + resolvedService.toString());
 	}
 	@Override
 	public void serviceTypeAdded(final ServiceEvent event)
 	{
-		//Log.d(TAG, "Service type added " + event.toString());
-		Log.d(TAG, "Service type added " + event.getType());
+		Log.d(TAG, String.format("Service type added %s", event.getType()));
 		jmdns.addServiceListener(event.getType(), this);
 	}
 	@Override
 	public void subTypeForServiceTypeAdded(ServiceEvent event) 
 	{
-		Log.d(TAG, "Service subtype added " + event.toString());
+		Log.d(TAG, String.format("Service subtype added %s", event.getType()));
 	}
 	
 	private void setupZeroconf() 
@@ -134,7 +138,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 			ip = "0.0.0.0";
 			InetAddress addr = InetAddress.getByName(ip);
 			*/
-			Log.d(TAG, "jmdns binding to ("+addr+")...");
+			Log.d(TAG, String.format("jmdns binding to %s", addr));
 			jmdns = JmDNS.create(addr, TAG);
 			Log.d(TAG, "jmdns created!");
 			Log.d(TAG, "Add listener...");
@@ -153,7 +157,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 	{
 		if (jmdns != null)
 		{
-			Log.i(TAG, "Stopping Zeroconf...");
+			Log.d(TAG, "Stopping Zeroconf...");
 			jmdns.unregisterAllServices();
 			try
 			{
@@ -171,7 +175,7 @@ public class http_control extends Activity implements ServiceListener, ServiceTy
 			lock.release();
 			lock = null;
 		}
-		Log.i(TAG, "Zeroconf stopped.");
+		Log.d(TAG, "Zeroconf stopped.");
 	}
 	
 }
