@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
+import android.net.Uri;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -66,6 +67,10 @@ public class http_control extends Activity implements OnItemClickListener
 	@Override // OnItemClickListener
 	public void onItemClick(AdapterView<?> l, View v, int position, long id)
 	{
+		String server = (String) l.getItemAtPosition(position);
+		Log.d(TAG, String.format("Selected %s", server));
+		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(server));
+		startActivity(browserIntent);
 	}
 	
 	private void startScanning()
@@ -126,10 +131,14 @@ public class http_control extends Activity implements OnItemClickListener
 	
 	private void configureIntentReceiver()
 	{
-		IntentFilter statusIntentFilter = new IntentFilter(zeroconf_service.BROADCAST_ACTION);
+		IntentFilter broadcastIntentFilter = new IntentFilter(zeroconf_service.BROADCAST_ACTION);
+		IntentFilter doneScanningIntentFilter = new IntentFilter(zeroconf_service.SCANOVER_ACTION);
 		//statusIntentFilter.addDataScheme("http");
 		BroadcastReceiver bReceiver = new zeroconf_receiver();
-		LocalBroadcastManager.getInstance(this).registerReceiver(bReceiver, statusIntentFilter);
+		BroadcastReceiver sReceiver = new donescanning_receiver();
+		LocalBroadcastManager broadcaster = LocalBroadcastManager.getInstance(this);
+		broadcaster.registerReceiver(bReceiver, broadcastIntentFilter);
+		broadcaster.registerReceiver(sReceiver, doneScanningIntentFilter);
 	}
 	
 	private class zeroconf_receiver extends BroadcastReceiver
@@ -140,12 +149,22 @@ public class http_control extends Activity implements OnItemClickListener
     @Override
     public void onReceive(Context context, Intent intent) 
     {
-			http_control.this.setScanningProgress(false);
-			String server = String.format("http:/%s:%s", 
+			String server = String.format("http:/%s:%s/", 
 					intent.getStringExtra(zeroconf_service.EXTRA_HOST),
 					intent.getStringExtra(zeroconf_service.EXTRA_PORT)
 				);
 			http_control.this.addServer(server);
+    }
+	}
+	private class donescanning_receiver extends BroadcastReceiver
+	{
+		private donescanning_receiver() 
+		{
+    }
+    @Override
+    public void onReceive(Context context, Intent intent) 
+		{
+			http_control.this.setScanningProgress(false);
     }
 	}
 }

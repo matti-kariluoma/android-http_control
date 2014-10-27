@@ -3,6 +3,7 @@ package ma.kariluo.matti;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.os.SystemClock;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
 import android.support.v4.content.LocalBroadcastManager;
@@ -23,6 +24,7 @@ import javax.jmdns.ServiceTypeListener;
 public class zeroconf_service extends IntentService implements ServiceListener, ServiceTypeListener
 {
 	public static final String BROADCAST_ACTION = "ma.kariluo.matti.BROADCAST";
+	public static final String SCANOVER_ACTION = "ma.kariluo.matti.SCANOVER";
 	public static final String EXTRA_HOST = "ma.kariluo.matti.HTTP_IPv4";
 	public static final String EXTRA_PORT = "ma.kariluo.matti.HTTP_PORT";
 	
@@ -48,9 +50,10 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 		String data = workIntent.getDataString();
 		setupZeroconf();
 		int i = 0;
-		while(isScanning)
+		while(isScanning && i <= servers)
 		{
 			i += 1;
+			SystemClock.sleep(1000);
 		}
 		LocalBroadcastManager broadcaster = LocalBroadcastManager.getInstance(this);
 		for (ServiceInfo si : HttpServers)
@@ -61,6 +64,8 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 			broadcaster.sendBroadcast(bIntent);
 		}
 		stopScan();
+		Intent sIntent = new Intent(zeroconf_service.SCANOVER_ACTION);
+		broadcaster.sendBroadcast(sIntent);
 	}
 	@Override
 	public void serviceResolved(ServiceEvent event) 
