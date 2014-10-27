@@ -5,11 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.MulticastLock;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.Formatter;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
@@ -19,6 +22,10 @@ import javax.jmdns.ServiceTypeListener;
 
 public class zeroconf_service extends IntentService implements ServiceListener, ServiceTypeListener
 {
+	public static final String BROADCAST_ACTION = "ma.kariluo.matti.BROADCAST";
+	public static final String EXTRA_HOST = "ma.kariluo.matti.HTTP_IPv4";
+	public static final String EXTRA_PORT = "ma.kariluo.matti.HTTP_PORT";
+	
 	private static final String TAG = "zeroconf_service";
 	private static final String HTTP_SERVICE_TYPE = "_http._tcp.local.";
 	// bugs ahoy https://code.google.com/p/android/issues/detail?id=35585
@@ -27,10 +34,13 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 	private MulticastLock lock = null;
 	private JmDNS jmdns = null;
 	private boolean isScanning = true;
+	private int servers = 0;
+	private List<ServiceInfo> HttpServers;
 	
 	public zeroconf_service()
 	{
 		super(TAG);
+		HttpServers = new ArrayList<ServiceInfo>();
 	}
 	@Override
 	protected void onHandleIntent(Intent workIntent) 
@@ -41,6 +51,14 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 		while(isScanning)
 		{
 			i += 1;
+		}
+		LocalBroadcastManager broadcaster = LocalBroadcastManager.getInstance(this);
+		for (ServiceInfo si : HttpServers)
+		{
+			Intent bIntent = new Intent(zeroconf_service.BROADCAST_ACTION);
+			bIntent.putExtra(EXTRA_HOST, String.format("%s", si.getInetAddresses()[0]));
+			bIntent.putExtra(EXTRA_PORT, String.format("%s", si.getPort()));
+			broadcaster.sendBroadcast(bIntent);
 		}
 		stopScan();
 	}
@@ -59,7 +77,12 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 					event.getInfo().getInetAddresses()[0], 
 					event.getInfo().getPort()
 				));
-			isScanning = false; // signal work done
+			HttpServers.add(event.getInfo());
+			servers -= 1;
+			if (servers < 1)
+			{
+				isScanning = false; // signal work done
+			}
 		}
 	}
 	@Override
@@ -74,6 +97,7 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 		if (HTTP_SERVICE_TYPE.equals(event.getType()))
 		{
 			Log.i(TAG, String.format("Http Service found: %s", event.getName()));
+			servers += 1;
 			jmdns.requestServiceInfo(event.getType(), event.getName());
 		}
 	}
@@ -92,6 +116,7 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 	private void setupZeroconf() 
 	{
 		isScanning = true;
+		servers = 0;
 		Log.d(TAG, "Setting up Zeroconf...");
 		Log.d(TAG, "Get WifiManager...");
 		WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -146,6 +171,7 @@ public class zeroconf_service extends IntentService implements ServiceListener, 
 	private void stopScan()
 	{
 		isScanning = false;
+		servers = 0;
 		if (jmdns != null)
 		{
 			Log.d(TAG, "Stopping Zeroconf...");
