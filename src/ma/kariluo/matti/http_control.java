@@ -16,6 +16,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public class http_control extends Activity implements OnItemClickListener
 	private static final String TAG = "http_control";
 	private ProgressBar scanProgress;
 	private ImageButton scanButton;
+	private TextView noneFoundLabel;
 	private ListView listView;
 	private ArrayAdapter listViewAdapter;
 	private List<String> servers;
@@ -43,10 +45,11 @@ public class http_control extends Activity implements OnItemClickListener
 		super.onStart();
 		setContentView(R.layout.main);
 		scanProgress = (ProgressBar) findViewById(R.id.scanProgress);
+		noneFoundLabel = (TextView) findViewById(R.id.noServersFoundLabel);
 		configureScanButton();
-		setScanningProgress(false);
 		configureListView();
-    configureIntentReceiver();
+		configureIntentReceiver();
+		setScanningProgress(false);
 		startScanning();
 	}
 	@Override // Activity
@@ -85,11 +88,16 @@ public class http_control extends Activity implements OnItemClickListener
 	{
 		if (isScanning) 
 		{
+			noneFoundLabel.setVisibility(View.GONE);
 			scanButton.setVisibility(View.GONE);
 			scanProgress.setVisibility(View.VISIBLE);
 		} 
 		else 
 		{
+			if (servers.size() < 1)
+			{
+				noneFoundLabel.setVisibility(View.VISIBLE);
+			}
 			scanButton.setVisibility(View.VISIBLE);
 			scanProgress.setVisibility(View.GONE);
 		}

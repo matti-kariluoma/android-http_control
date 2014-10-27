@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">http_control</string>
+	<string name="app_name">Http Control</string>
+	<string name="no_servers_found">No Http servers were found on the local (ZeroConf) network.</string>
 </resources>

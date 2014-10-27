@@ -15,6 +15,13 @@
 		android:layout_width="48sp"
 		android:layout_height="48sp"
 	/>
+<TextView
+		android:id="@+id/noServersFoundLabel"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:padding="18sp"
+		android:text="@string/no_servers_found"
+	/>
 <ListView
 		android:id="@+id/listView"
 		android:layout_width="match_parent"
